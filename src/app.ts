@@ -7,6 +7,7 @@ import * as colors from 'colors';
 
 import { PORT } from './config/env';
 import { mainRouter } from './main/main.routes';
+import { DBConnection } from './config/database';
 
 export class Server {
     private app: Application;
@@ -16,6 +17,7 @@ export class Server {
         this.color = colors;
         this.app = express();
         this.settings();
+        this.connectDB();
         this.middlewares();
         this.routes();
     }
@@ -40,5 +42,10 @@ export class Server {
 
     private routes(): void {
         this.app.use('/api', mainRouter);
+    }
+
+    private async connectDB(): Promise<any> {
+        const db = new DBConnection();
+        db.connectMongoose();
     }
 }

@@ -1,12 +1,25 @@
-import { IUser } from '../users/users.model';
+import User from './users.model';
+import bcryptjs from 'bcryptjs';
 
 class usersServices {
-    public async getAllUsers(): Promise<any> {
+
+    public async getUsersByFilters(queries: any): Promise<any> {
+        const {
+            size,
+            page = '0'
+        } = queries;
+        const queryStatus = { status: true };
         try {
+            const [users, total] = await Promise.all([
+                User.find(queryStatus).limit(parseInt(size)).skip(parseInt(page)),
+                User.countDocuments(queryStatus)
+            ]);
             return [
                 'GET',
                 {
-                    users: []
+                    users,
+                    page: parseInt(page),
+                    totalRegs: total
                 }
             ];
         } catch (error) {
@@ -14,12 +27,20 @@ class usersServices {
         }
     }
 
-    public async getuserById(id: string): Promise<any> {
+    public async getUserById(id: string): Promise<any> {
         try {
+            const user = await User.findById(id);
             return [
                 'GET',
                 {
-                    id
+                    user: {
+                        id: user._id,
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        google: user.google,
+                        status: user.status
+                    }
                 }
             ];
         } catch (error) {
@@ -27,12 +48,31 @@ class usersServices {
         }
     }
 
-    public async createUser(user: IUser): Promise<any> {
+    public async createUser(user: any): Promise<any> {
+        const {
+            name,
+            email,
+            password,
+            role
+        } = user;
+        const newUser = new User({ name, email, password, role });
+
+        // Encrypt password
+        const salt = bcryptjs.genSaltSync(10);
+        newUser.password = bcryptjs.hashSync(password, salt);
+
+        // Save data
+        await newUser.save();
         try {
             return [
                 'POST',
                 {
-                    user
+                    user: {
+                        id: newUser._id,
+                        name: newUser.name,
+                        email: newUser.email,
+                        role: newUser.role,
+                    }
                 }
             ];
         } catch (error) {
@@ -40,12 +80,20 @@ class usersServices {
         }
     }
 
-    public async updateUser(user: string, id: string): Promise<any> {
+    public async updateUser(user: any, id: string): Promise<any> {
         try {
+
+            const { _id, password, google, email, ...rest } = user;
+            if (password) {
+                // Encrypt password
+                const salt = bcryptjs.genSaltSync(10);
+                rest.password = bcryptjs.hashSync(password, salt);
+            }
+            const newUser = await User.findByIdAndUpdate(id, rest);
             return [
                 'PUT',
                 {
-                    user
+                    user: newUser
                 }
             ];
         } catch (error) {
@@ -55,29 +103,12 @@ class usersServices {
 
     public async deleteUser(id: string): Promise<any> {
         try {
+            const queryStatus = { status: false };
+            const user = await User.findByIdAndUpdate(id, queryStatus);
             return [
                 'DELETE',
                 {
-                    id: 'asldkjalds',
-                    user: 'asldkjalds'
-                }
-            ];
-        } catch (error) {
-            return error;
-        }
-    }
-
-    public async getUsersByFilters(queries: any): Promise<any> {
-        const {
-            size,
-            page = '1'
-        } = queries;
-        try {
-            return [
-                'GET',
-                {
-                    size,
-                    page
+                    user
                 }
             ];
         } catch (error) {
